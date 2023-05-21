@@ -56,8 +56,83 @@ class Vector{
         }
 
         bool empty() const { return vectorData == vectorAvailable; }
-        
+
+        void reserve(size_type number){
+            if(number > capacity()){
+                iterator new_data = alloc.allocate(number);
+                iterator new_available = std::uninitialized_copy(vectorData, vectorAvailable, new_data);
+                uncreate();
+                vectorData = new_data;
+                vectorAvailable = new_available;
+                vectorLimit = vectorData + number;
+            }
+        }
+
+        void resize(size_type number){
+            if(number > capacity()){
+                reserve(number);
+            }
+            if(number > size()){
+                std::uninitialized_fill(vectorAvailable, vectorData + number, T{});
+            }
+            else if(number < size()){
+                while(vectorAvailable != vectorData + number){
+                    alloc.destroy(--vectorAvailable);
+                }
+            }
+            vectorAvailable = vectorData + number;
+        }
+
+        void clear(){
+            while(vectorAvailable != vectorData){
+                alloc.destroy(--vectorAvailable);
+            }
+        }
+
+        void print(){
+            
+            if(size() == 0){
+                std::cout << "Vector is empty!";
+            }
+            else{
+                for(int i = 0; i < size(); i++){
+                    std::cout << vectorData[i] << " ";
+                }
+                std::cout << std::endl;
+            }
+        }
+
+        void erase(iterator position){
+            if(position + 1 != vectorAvailable){
+                std::copy(position + 1, vectorAvailable, position);
+            }
+            alloc.destroy(--vectorAvailable);
+        }
+        void erase(size_type position){
+            iterator index = begin() + position;
+            if(index + 1 != vectorAvailable){
+                std::copy(index + 1, vectorAvailable, index);
+            }
+            alloc.destroy(--vectorAvailable);
+        }
+        void erase(iterator first_position, iterator last_position){
+            iterator index = std::copy(last_position, vectorAvailable, first_position);
+            while(index != vectorAvailable){
+                alloc.destroy(--vectorAvailable);
+            }
+        }
+        void erase(size_type start_position, size_type last_position){
+
+            iterator index_start = begin() + start_position;
+            iterator index_end = begin() + last_position;
+            iterator index = std::copy(index_end, vectorAvailable, index_start);
+            while(index != vectorAvailable){
+                alloc.destroy(--vectorAvailable);
+            }
+        }
+
         // getteriai
+        size_type capacity() const { return vectorLimit - vectorData; }
         size_type size() const { return vectorAvailable - vectorData; }
         iterator begin() { return vectorData; } 
         const_iterator begin() const { return vectorData; } 

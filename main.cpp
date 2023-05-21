@@ -4,57 +4,60 @@
 
 int main(){
 
- std::cout << std::endl;
+    Vector<int> vienas;
 
-Vector<std::string> v(5, "4");
+    vienas.reserve(10);
 
-for(auto i = v.begin(); i != v.end(); ++i) {
-    std::cout << *i << ' ';
-}
+    vienas.push_back(1);
+    vienas.push_back(1);
+    vienas.push_back(1);
+    vienas.push_back(1);
+    vienas.push_back(1);
+    vienas.push_back(1);
 
-    std::cout << std::endl;
+    std::cout << "Size: " << vienas.size() << "\n";
+    std::cout << "Capacity: " << vienas.capacity() << "\n";
 
-Vector<std::string> v2(v);
+    vienas.reserve(4);
 
-for(auto i = v2.begin(); i != v2.end(); ++i) {
-    std::cout << *i << ' ';
-}
+    std::cout << "Size: " << vienas.size() << "\n";
+    std::cout << "Capacity: " << vienas.capacity() << "\n";
 
-    std::cout << std::endl;
+    vienas.resize(15);
 
-Vector <std::string> v3;
+    for(int i = 0; i < vienas.size(); i++){
+        std::cout << vienas[i] << " ";
+    };
 
-v3 = v2;
+    std::cout << "\n";
 
-for(auto i = v3.begin(); i != v3.end(); ++i) {
-    std::cout << *i << ' ';
-}
-    std::cout << std::endl;
+    vienas.resize(5);
 
-v3.push_back("5");
+    for(int i = 0; i < vienas.size(); i++){
+        std::cout << vienas[i] << " ";
+    };
 
-for(auto i = v3.begin(); i != v3.end(); ++i) {
-    std::cout << *i << ' ';
-}
-    std::cout << std::endl;
+    std::cout << "Size: " << vienas.size() << "\n";
 
-    v2.pop_back();
-    v2.pop_back();
+    vienas.clear();
+    
+    std::cout << "Size: " << vienas.size() << "\n";
+    std::cout << "Capacity: " << vienas.capacity() << "\n";
 
-for(auto i = v2.begin(); i != v2.end(); ++i) {
-    std::cout << *i << ' ';
-}
 
-    std::cout << std::endl;
+    vienas.push_back(1);
+    vienas.push_back(2);
+    vienas.push_back(3);
+    vienas.push_back(4);
+    vienas.push_back(5);
+    vienas.push_back(6);
 
-    std::cout << v2.empty();
+    vienas.print();
+    std::cout << "Capacity: " << vienas.capacity() << "\n";
 
-    Vector <std::string> v4;
+    vienas.erase(1,4);
 
-    std::cout << std::endl;
-
-    std::cout << v4.empty();
-
-    std::cout << std::endl;
+    vienas.print();
+    std::cout << "Capacity: " << vienas.capacity() << "\n";
     return 0;
 }
