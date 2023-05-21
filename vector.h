@@ -2,10 +2,8 @@
 #define VECTOR_H
 
 #include <iostream>
-#include <algorithm>
-#include <string>
 #include <memory>
-
+#include <algorithm>
 
 template <typename T>
 class Vector{
@@ -17,8 +15,12 @@ class Vector{
         typedef size_t size_type;
         typedef T value_type;
 
-        // rule of three
+        // rule of five
         Vector(){ createVector(); }
+
+        Vector(std::initializer_list<T> initList) {
+            createVector(initList.begin(), initList.end());
+        }
 
         explicit Vector(size_type number, const T& value = T{}) { createVector(number, value); vectorAvailable = vectorData + number;  }
 
@@ -41,6 +43,22 @@ class Vector{
         T& operator[](size_type index) { return vectorData[index];}
         const T& operator[](size_type index) const { return vectorData[index];}
 
+        Vector& operator=(Vector&& other) noexcept {
+            if (&other == this)
+                return *this;
+
+            if (vectorData) {
+                alloc.deallocate(vectorData, capacity());
+            }
+
+            vectorData = other.vectorData;
+            vectorAvailable = other.vectorAvailable;
+            vectorLimit = other.vectorLimit;
+
+            other.vectorData = other.vectorAvailable = other.vectorLimit = nullptr;
+
+            return *this;
+        }
         // setteriai
         void push_back(const T& value){
             if(vectorAvailable == vectorLimit){
@@ -131,13 +149,112 @@ class Vector{
             }
         }
 
+        void shrink_to_fit(){
+            iterator new_data = alloc.allocate(size());
+            iterator new_available = std::uninitialized_copy(vectorData, vectorAvailable, new_data);
+            uncreate();
+            vectorData = new_data;
+            vectorAvailable = new_available;
+            vectorLimit = vectorData + size();
+        }
+
+        void insert(iterator position, const T& value){
+            if (position < begin() || position > end()) {
+                std::cout << ("Invalid insert position") << std::endl;
+            }
+            else{
+                size_type offset = position - vectorData;
+                if(vectorAvailable == vectorLimit){
+                    grow();
+                    position = vectorData + offset;
+                }
+                std::copy_backward(position, vectorAvailable, vectorAvailable + 1);
+                *position = value;
+                ++vectorAvailable;
+            }
+        }
+
+        void insert(iterator position, iterator start, iterator finish) {
+            if (position < begin() || position > end()) {
+                std::cout << ("Invalid insert position") << std::endl;
+            }
+            else{
+                size_type offset = position - vectorData;
+                size_type new_elements_count = finish - start;
+
+                if(vectorAvailable + new_elements_count > vectorLimit) {
+                    grow();
+                }
+                else {
+                    std::copy_backward(position, vectorAvailable, vectorAvailable + new_elements_count);
+                    std::copy(start, finish, position);
+                    vectorAvailable += new_elements_count;
+                }
+            }
+        }
+
+        void assign(size_type number, const T& value){
+            clear();
+            if(number > capacity()){
+                reserve(number);
+            }
+            for(size_type i = 0; i < number; i++){
+                push_back(value);
+            }
+        }
+
+        void assign(iterator start, iterator finish){
+            clear();
+            if(std::distance(start, finish) > capacity()){
+                reserve(std::distance(start, finish));
+            }
+            for(iterator i = start; i != finish; i++){
+                push_back(*i);
+            }
+        }
+        void assign(std::initializer_list<T> ilist){
+            assign(ilist.begin(), ilist.end());
+        }
+
+        template<typename InputIterator>
+        void assign(InputIterator first, InputIterator last) {
+            clear();
+            while (first != last) {
+                push_back(*first);
+                ++first;
+            }
+        }
+        void swap(Vector& other){
+            std::swap(vectorData, other.vectorData);
+            std::swap(vectorAvailable, other.vectorAvailable);
+            std::swap(vectorLimit, other.vectorLimit);
+        }
+
         // getteriai
         size_type capacity() const { return vectorLimit - vectorData; }
         size_type size() const { return vectorAvailable - vectorData; }
         iterator begin() { return vectorData; } 
         const_iterator begin() const { return vectorData; } 
         iterator end() { return vectorAvailable; } 
-        const_iterator end() const { return vectorAvailable; } 
+        const_iterator end() const { return vectorAvailable; }
+        T& front() { return *vectorData; }
+        const T& front() const { return *vectorData; }
+        T& back() { return *(vectorAvailable - 1); }
+        const T& back() const { return *(vectorAvailable - 1); } 
+        T& at(size_type index){
+            if(index < 0 || index >= size()){
+                throw std::out_of_range("Index out of range");
+            }
+            return vectorData[index];
+        }
+        T* data() noexcept { return vectorData; }
+        const T* data() const noexcept { return vectorData; }
+        const T& at(size_type index) const {
+            if(index < 0 || index >= size()){
+                throw std::out_of_range("Index out of range");
+            }
+            return vectorData[index];
+        }
 
     private:
 
@@ -163,17 +280,17 @@ class Vector{
             vectorLimit = vectorData + (end - start);
         }
                 
-        void uncreate(){
-            if(vectorData){
+        void uncreate() {
+            if(vectorData) {
                 for (iterator p = vectorAvailable; p != vectorData; )
-                    alloc.destroy(--p);
-                    alloc.deallocate(vectorData, vectorLimit - vectorData);
-                    vectorData = vectorAvailable = vectorLimit = nullptr;
+                    (--p)->~T();
+                alloc.deallocate(vectorData, vectorLimit - vectorData);
+                vectorData = vectorAvailable = vectorLimit = nullptr;
             }
         }
                 
         void grow(){
-            size_type new_size = std::max(2 * (vectorLimit - vectorData), ptrdiff_t(1));
+            size_type new_size = std::max(10 * (vectorLimit - vectorData), ptrdiff_t(1));
             iterator new_data = alloc.allocate(new_size);
             iterator new_available = new_data + (vectorAvailable - vectorData);
             std::uninitialized_copy(vectorData, vectorAvailable, new_data);
@@ -187,6 +304,5 @@ class Vector{
             alloc.construct(vectorAvailable++, value);
         }
 };
-
 
 #endif
