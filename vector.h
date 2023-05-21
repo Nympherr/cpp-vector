@@ -2,6 +2,9 @@
 #define VECTOR_H
 
 #include <iostream>
+#include <algorithm>
+#include <string>
+#include <memory>
 
 
 template <typename T>
@@ -23,18 +26,22 @@ class Vector{
     iterator end() { return vectorLimit; } 
     const_iterator end() const { return vectorLimit; } 
 
+
     // konstruktoriai
     Vector(){ createVector(); }
-    explicit Vector(size_type number, const T& value = T{}) { createVector(number, value); }
+    explicit Vector(size_type number, const T& value = T{}) { createVector(number, value); vectorAvailable = vectorData + number;  }
 
     // copy konstruktorius
     Vector(const Vector& vector) { createVector(vector.begin(), vector.end()); }
 
-    // priskyrimo operatorius
+   // priskyrimo operatorius
     Vector& operator=(const Vector& other) {
         if(this != &other) {
             uncreate();
-            createVector(other.begin(), other.end());
+
+            vectorData = alloc.allocate(other.size());
+            vectorLimit = vectorData + other.size();
+            vectorAvailable = std::uninitialized_copy(other.begin(), other.end(), vectorData);
         }
         return *this;
     }
@@ -42,33 +49,61 @@ class Vector{
     ~Vector() { uncreate(); }
 
     void createVector(){
-        vectorData = nullptr;
-        vectorLimit = nullptr;
+        vectorData = vectorLimit = vectorAvailable = nullptr;
     }
+
     void createVector(size_type number, const T& value = T{}){
-        vectorData = new T[number];
-        vectorLimit = vectorData + number;
-        for(size_type i = 0; i < number; i++) {
-        vectorData[i] = value;
-        }
+        vectorData = alloc.allocate(number);
+        vectorAvailable = vectorLimit = vectorData + number;
+        std::uninitialized_fill_n(vectorData, number, value);
     }
+
     void createVector(const_iterator start, const_iterator end){
-        size_type size = end - start;
-        vectorData = new T[size];
-        std::copy(start, end, vectorData);
-        vectorLimit = vectorData + size;
+        vectorData = alloc.allocate(end - start);
+        vectorAvailable = std::uninitialized_copy(start, end, vectorData);
+        vectorLimit = vectorData + (end - start);
     }
     void uncreate(){
         if(vectorData){
-            delete[] vectorData;
-            vectorData = nullptr;
-            vectorLimit = nullptr;
+
+            for (iterator p = vectorAvailable; p != vectorData; )
+            alloc.destroy(--p);
+
+            alloc.deallocate(vectorData, vectorLimit - vectorData);
+            vectorData = vectorAvailable = vectorLimit = nullptr;
         }
     }
+
+
+    void push_back(const T& value){
+        if(vectorAvailable == vectorLimit){
+            grow();
+        }
+        unchecked_append(value);
+    }
+
+    void grow(){
+        size_type new_size = std::max(2 * (vectorLimit - vectorData), ptrdiff_t(1));
+        iterator new_data = alloc.allocate(new_size);
+        iterator new_available = new_data + (vectorAvailable - vectorData);
+        std::uninitialized_copy(vectorData, vectorAvailable, new_data);
+        uncreate();
+        vectorData = new_data;
+        vectorAvailable = new_available;
+        vectorLimit = vectorData + new_size;
+    }
+
+    void unchecked_append(const T& value){
+        alloc.construct(vectorAvailable++, value);
+    }
+
+
         private:
 
         iterator vectorData;
+        iterator vectorAvailable;
         iterator vectorLimit;
+        std::allocator<T> alloc; 
 
 };
 
